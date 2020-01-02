@@ -1,0 +1,43 @@
+1.app 实现多进程
+Android中，默认一个APK包就对应一个进程。
+Android平台对每个进程有内存限制，如果一個app有多个进程，那么总的内存就是所有进程的内存的总和，使用多进程，可以提高我们APP占用的最高内存。
+实现多进程可以通过设置service、broadcast、activity的标签android:process来实现。
+一般情况下启动这些组件默认是在同一个进程里运行的，如果设置了android:process标签，则会运行在其他进程里。
+如果android:process的value不是”:”开头，则系统里有同样名字的进程的话，会放到已存在的同名进程里运行，这样能减小消耗。
+如果android:process的value是以”:”开头，则启动一个名字为value的进程。
+比如:仅仅需要在AndroidManifest.xml里面注册时，加上android:process！
+    
+    <service
+            android:name=".service.AbleService"
+            android:enabled="true"
+            android:exported="true"
+            android:process="com.fingerth.able.service"/>
+
+
+
+2.Volley相关答疑
+优点：
+
+ 1. 一个缓存线程 ，4个网络线程
+
+ 2. 缓存时间根据Cache-Control和Expires首部来计算缓存的过期时间
+默认 Android2.3 及以上基于 HttpURLConnection，2.3 以下基于 HttpClient 实现
+
+3. 接口设计比较多，Network接口
+
+4. 支持重试和优先级设置
+
+5. 特别适合数据量小，通信频繁的网络操作
+
+缺点：
+
+1. Volley的网络请求线程池默认大小为4。意味着可以并发进行4个请求，大于4个，会排在队列中。
+
+2. Request#getBody() 方法返回byte[]类型，作为 Http.POST 和 Http.PUT body 中的数据。这就意味着需要把用 http 传输的数据一股脑读取到内存中。如果文件过大，内存...
+
+考虑这样一个场景:
+你同时上传4个文件，这四个文件都很大，这时候你的内存占用就很高，很容易oom。
+这时候，你发网络请求，调用普通api。
+所有的网络线程都被上传文件的任务占满了，你的网络请求只有在文件上传完毕后才能得到执行。体验就是，很慢！
+
+所以Volley适合数据量小，频率快的请求。
