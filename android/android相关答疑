@@ -41,3 +41,195 @@ Android平台对每个进程有内存限制，如果一個app有多个进程，�
 所有的网络线程都被上传文件的任务占满了，你的网络请求只有在文件上传完毕后才能得到执行。体验就是，很慢！
 
 所以Volley适合数据量小，频率快的请求。
+
+
+
+
+
+3.是否使用过本地广播，和全局广播有什么差别？
+引入本地广播的机制是为了解决安全性的问题：
+
+1） 正在发送的广播不会脱离应用程序，比用担心app的数据泄露；
+2） 其他的程序无法发送到我的应用程序内部，不担心安全漏洞。（比如：如何做一个杀不死的服务---监听火的app 比如微信、友盟、极光的广播，来启动自己。）
+3） 发送本地广播比发送全局的广播高效。（全局广播要维护的广播集合表 效率更低。全局广播，意味着可以跨进程，就需要底层的支持。）
+
+本地广播不能用静态注册。----静态注册：可以做到程序停止后还能监听。
+使用：
+
+注册:
+LocalBroadcastManager.getInstance(this).registerReceiver(new XXXBroadCastReceiver(), new IntentFilter(action));
+取消注册：
+LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
+
+
+4.是否使用过 IntentService，作用是什么
+一般我们所使用的Service是运行在主线程当中的，所以在service里面编写耗时的操作代码，则会卡主线程会ANR。为了解决这样的问题，谷歌引入了IntentService.
+
+IntentService的优点：
+（1） 它创建一个独立的工作线程来处理所有一个一个intent。
+（2） 创建了一个工作队列，来逐个发送intent给onHandleIntent()
+（3） 不需要主动调用stopSelf()来结束服务，因为源码里面自己实现了自动关闭。
+（4） 默认实现了onBind()返回的null。
+（5） 默认实现的onStartCommand()的目的是将intent插入到工作队列。
+
+
+
+5.AIDL 解决了什么问题？
+AIDL的全称：Android Interface Definition Language，安卓接口定义语言。
+由于Android系统中的进程之间不能共享内存，所以需要提供一些机制在不同的进程之间进行数据通信。
+
+远程过程调用： RPC—Remote Procedure Call。 安卓就是提供了一种IDL的解决方案来公开自己的服务接口。AIDL:可以理解为双方的一个协议合同。双方都要持有这份协议---文本协议 xxx.aidl文件（安卓内部编译的时候会将aidl协议翻译生成一个xxx.java文件---代理模式：Binder驱动有关的，Linux底层通讯有关的。）
+在系统源码里面有大量用到aidl，比如系统服务。
+电视机顶盒系统开发。你的服务要暴露给别的开发者来使用。
+
+
+6.view 绘制流程
+Measure： 测量，测量自己。如果是ViewGroup就需要测量里面的所有childview.
+测量的结果怎么办？setMeasuredDimension(resolveSizeAndState(maxWidth, widthMeasureSpec, childState), heightSizeAndState);设置自己的大小。
+Layout: 摆放，把自己摆放在哪个位置。如果是ViewGroup就需要发放里面的所有childview.
+怎么去具体摆放呢？
+Draw:绘制
+
+
+7.很多种ANR错误出现的场景：
+
+主线程当中执行IO/网络操作，容易阻塞。
+主线程当中执行了耗时的计算。----自定义控件的时候onDraw方法里面经常这么做。
+（同时聊一聊自定义控件的性能优化：在onDraw里面创建对象容易导致内存抖动---绘制动作会大量不断调用，产生大量垃圾对象导致GC很频繁就造成了内存抖动。）内存抖动就容易造成UI出现掉帧卡顿的问题
+BroadCastReceiver没有在10秒内完成处理。
+BroadCastReceiver的onReceived代码中也要尽量减少耗时的操作，建议使用IntentService处理。
+Service执行了耗时的操作，因为service也是在主线程当中执行的，所以耗时操作应该在service里面开启子线程来做。
+使用AsyncTask处理耗时的IO等操作。
+使用Thread或者HandlerThread时，使用Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)或者java.lang.Thread.setPriority （int priority）设置优先级为后台优先级，这样可以让其他的多线程并发消耗CPU的时间会减少，有利于主线程的处理。
+Activity的onCreate和onResume回调中尽量耗时的操作。
+
+
+
+8.Requestlayout， onlayout， onDraw， DrawChild 区别与联系
+
+RequestLayout()方法： 会导致调用Measure()方法和layout()。将会根据标志位判断是否需要onDraw();
+onLayout()：摆放viewGroup里面的子控件
+onDraw()：绘制视图本身；（ViewGroup还需要绘制里面的所有子控件）
+drawChild(): 重新回调每一个子视图的draw方法。child.draw(canvas, this, drawingTime);
+
+
+invalidate()和 postInvalidate() 的区别及使用
+
+invalidate()： 在主线程当中刷新；
+postInvalidate()：在子线程当中刷新；其实最终调用的就是invalidate，原理依然是通过工作线程向主线程发送消息这一机制。
+
+
+9.LinearLayout 对比 RelativeLayout
+性能对比： LinearLayout的性能要比RelativeLayout好。
+因为RelativeLayout会测量两次。而默认情况下（没有设置weight）LinearLayout只会测量一次。
+
+为什么RelativeLayout会测量两次？首先RelativeLayout中的子view排列方式是基于彼此依赖的关系，而这个依赖可能和布局中view的顺序无关，在确定每一个子view的位置的时候，就需要先给每一个子view排一下序。又因为RelativeLayout允许横向和纵向相互依赖，所以需要横向纵向分别进行一次排序测量。
+
+10.优化自定义 view
+1） 减少在onDraw里面大量计算和对象创建和大量内存分配。
+2） 应该尽量少用invalidate()次数。
+3） view里面耗时的操作layout。减少requestLayout（）避免让UI系统重新遍历整棵树。Mearsure。
+4） 如果你有一个很复杂的布局，不如将这个复杂的布局直接使用你自己的写的ViewGroup来实现。减少了一个树的层次关系 全部都是自己测量和layout，达到优化的目的。（Facebook就经常这么干）
+
+
+11.ContentProvider相关
+
+ContentProvider方法无侵入式初始化方案的优缺点：
+
+优点：对于固定的初始化配置，可以使用ContextProvider方案减少调用方的配置，减少出错。
+
+缺点：如果初始化非常耗时，无疑会拖慢App的启动，如果是耗时初始化，应该提供给调用方自行决定，例如将初始化推迟到主界面onCreate()时才调用初始化。
+
+contentprovider的oncreate要先于application的oncreate启动
+在应用启动的时候，会通过ActivityThread的attach方法通过远程调用AMS的attachApplication来将ApplicationThread（Binder对象）传递给AMS，同时在该方法中会调用ApplicationThread的bindApplication方法，同样也是跨进程的。该方法最终通过handler转移到ActivityThread中运行，具体为handleBindApplication，在其中主线程会创建application对象并加载contentprovider，注意contentprovider是先被加载的。
+
+
+
+
+12.SharedPreference注意事项：
+sp是一种轻量级的存储方式，使用方便，但是也有它适用的场景。要优雅滴使用sp，要注意以下几点：
+不要存放大的key和value！我就不重复三遍了，会引起界面卡、频繁GC、占用内存等等，好自为之！
+毫不相关的配置项就不要丢在一起了！文件越大读取越慢，不知不觉就被猪队友给坑了；蓝后，放进defalut的那个简直就是愚蠢行为！
+读取频繁的key和不易变动的key尽量不要放在一起，影响速度。（如果整个文件很小，那么忽略吧，为了这点性能添加维护成本得不偿失）
+不要乱edit和apply，尽量批量修改一次提交！
+尽量不要存放JSON和HTML，这种场景请直接使用json！
+不要指望用这货进行跨进程通信！！！
+SharePreferences的commit与apply一个是同步一个是异步
+
+
+11.onresume时不一致会绘制完成:
+这个时候就可以用到IdleHandler，不必postdelay去进行页面加载操作
+
+IdleHandler 可以用来提升性能，主要用在我们希望能够在当前线程 消息队列空闲时 做些事情（例如UI线程在显示完成后，如果线程空闲我们就可以提前准备其他内容）的情况下，不过最好不要做耗时操作。
+代码样例：
+		Looper.myQueue().addIdleHandler(new MyIdleOnce());
+                class MyIdleKeep implements MessageQueue.IdleHandler{
+		/**
+		 *返回值为true，则保持此Idle一直在Handler中，否则，执行一次后就从Handler线程中remove掉。
+		 */
+		@Override
+		public boolean queueIdle() {
+			Log.d("hlwang","我是空闲线程,我还会回来的！");
+			return true;
+		}
+		
+	}
+
+
+12.两种启动service的区别
+  startService 启动的服务：主要用于启动一个服务执行后台任务，不进行通信。停止服务使用stopService；
+  bindService 启动的服务：该方法启动的服务可以进行通信。停止服务使用unbindService； 
+  startService 同时也 bindService 启动的服务：停止服务应同时使用stepService与unbindService
+  
+  通过startService启动后，service会一直无限期运行下去，只有外部调用了stopService()或stopSelf()方法时，该Service才会停止运行并销毁。
+  也就是说，onCreate()只会在第一次创建service时候调用，多次执行startService()不会重复调用onCreate()，但会多次运行onStartCommand()
+
+总结调用bindService之后发生的事情：
+1.client执行bindService()
+2.如果Service不存在，则Service执行onCreate(),onBind()
+3.client实例ServiceConnection执行onServiceConnected()方法
+
+
+
+13.性能调优：
+  进程冷启动：线程池异步初始化，尽量同一时刻结束；非必须不初始化，application的oncreate只做必要逻辑
+  布局优化：代码减少层级，减少measure次数，减少背景图片和背景图大小，使用recycleview，listview 替换scrollview
+  资源预加载：在上一级页面idleHandler时，可以提前inflate下个页面的 
+  内存调优： 资源即使释放（游标，eventbus开闭），线程池替换单个线程，选用合适的数据结构
+ 慎用单例（ 单例意味着很难被继承重写！每次访问它的时候，都会查看是否被创建（多增加了一次判断），单例只有自己持有真正的引用，，如何销毁何时销毁都是问题，可能还会造成指针悬挂 ） 
+cpu性能调优：采用多进程， 关闭非必须的thread，service
+调试手段，trace文件，profile leakcanary
+
+
+14.linkedhashmap原理：
+HashMap是无序的，当我们希望有顺序地去存储key-value时，就需要使用LinkedHashMap了。
+图片缓存LruCache就是用的linkedhashmap，自带实现lru
+
+15. source code --->java  ----> class文件 ---->  dex
+  APT在compile任务前，修改java文件；  例如：DataBinding,Dagger2, ButterKnife, EventBus3 、DBFlow、AndroidAnnotation
+  AspectJ在java --> class阶段，修改java代码；
+  asm，都是修改的.class
+  asm 实现android耗时统计，性能统计
+  aop：1、日志记录：业务埋点
+       2、持久化
+       3、性能监控：性能日志
+       4、数据校验：方法的参数校验
+       5、缓存：内存缓存和持久缓存
+       6、权限检查：业务权限（如登陆，或用户等级）、系统权限（如拍照定位）
+       7、异常处理
+
+利用AOP技术将这些功能代码从业务逻辑代码中划分出来，通过对这些行为的分离，可以将它们独立到非业务逻辑。无论是日后新增，或是修改，都手到擒来易如反掌。
+
+AspectJ使用： 缺点侵入性太强      
+  classpath 'com.hujiang.aspectjx:gradle-android-plugin-aspectjx:2.0.6'
+
+所以完成插入操作我们只需要
+
+1）类上加入注释@Aspect
+
+2）方法上加入注释@Before
+
+3）Before里写入要插入的相关信息
+
+关键字：before（方法运行前） after（方法运行后） AfterReturing（返回结构后才会执行）   AfterThrowing（报错执行）  Around(综合通知)
+   

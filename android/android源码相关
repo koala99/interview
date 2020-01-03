@@ -1,0 +1,55 @@
+其实所谓的AMS，PMS，以及WMS等都是运行在system_server这个进程中的线程.
+
+zygote里面fork出的systemserver 
+sleep是Thread类的静态方法，谁调用谁去睡觉。sleep是占用cpu去睡觉，而wait是放弃cpu去睡觉.
+
+
+
+>>>>>>>>>>>   AMS   >>>>>>>>>>>>>>>
+一、ActivityManagerService提供的主要功能：
+       （1）统一调度各应用程序的Activity
+       （2）内存管理
+       （3）进程管理
+      二、启动一个Activity的方式有以下几种：
+   （1）在应用程序中调用startActivity启动指定的Activity
+   （2）在Home程序中单击一个应用图标，启动新的Activity
+   （3）按“Back”键，结束当前Activity，返回到上一个Activity
+   （4）长按“Home”键，显示出当前正在运行的程序列表，从中选择一个启动
+     这四种启动方式的主体处理流程都会按照第一种启动方式运行，后面三种方式只是在前端消息处理上各有不同。
+
+在整个系统中，Activity实际上有两个实体。一个在应用进程中跟应用程序员打交道的Activity，一个是在AMS的中具有管理功能的History Record。应用进程中的Activity都登记ActivityThread实例中的mActivity数组中，而在AM端，HistroytRecord实例放置在mHistroy栈中。mHistory栈是Android管理Activity的场所，放置在栈顶的就是User看到的处于活动状态的Activity。
+
+Activity的内核实体是依靠在ProcessRecord的成员变量中，通过ProcessRecord我们可以访问到所有的属于该Process的Activity。而在ProcessRecord记录了与应用进程之间的联系：IActivtityThread接口。通过该接口，可以访问到所对应的Activity的方法。在Launch Activity时，AMS将对应的HistoryRecord作为token传递到客服端和客服端的Activity建立联系。在AMS中Activity状态变化时，将通过该联系找到客服端的Activity，从而将消息或者动作传递应用程序面对的接口：xxxActivity。
+
+AMS是Android中最核心的服务，主要负责系统中四大组件的启动、切换、调度及应用进程的管理和调度等工作，其职责与操作系统中的进程管理和调度模块相类似，因此它在Android中非常重要。
+AMS是本书碰到的第一块难啃的骨头[①]，涉及的知识点较多。为了帮助读者更好地理解AMS，本章将带领读者按五条不同的线来分析它。
+·  第一条线：同其他服务一样，将分析SystemServer中AMS的调用轨迹。
+·  第二条线：以am命令启动一个Activity为例，分析应用进程的创建、Activity的启动，以及它们和AMS之间的交互等知识。
+·  第三条线和第四条线：分别以Broadcast和Service为例，分析AMS中Broadcast和Service的相关处理流程。
+·  第五条线：以一个Crash的应用进程为出发点，分析AMS如何打理该应用进程的身后事。
+除了这五条线外，还将统一分析在这五条线中频繁出现的与AMS中应用进程的调度、内存管理等相关的知识。
+
+
+
+
+>>>>>>>>>>>>>>>   WMS   >>>>>>>>>>>>>>>>
+
+用户消息可分为两类，一类是Key消息，另一类是Motion消息。在Android2.3版本的消息系统设计中，对于Motion消息，InputDispatcher会使用pipe直接把消息发往客户窗口，WmS类不能对这些消息进行任何的前置（pre）处理，而对于Key消息，则会首先回调WmS中的Key消息处理函数，在WmS中不处理该消息时，才把消息发往客户窗口中。
+
+Android系统中的窗口是屏幕上的一块用于绘制各种UI元素并可以响应应用户输入的一个矩形区域。从原理上来讲，窗口的概念是独自占有一个Surface实例的显示区域。例如Dialog、Activity的界面、壁纸、状态栏以及Toast等都是窗口。
+
+分析WMS的两个基础子系统的工作原理：
+·  布局系统（Layout System），计算与管理窗口的位置、层次。
+·  动画系统（Animation System），根据布局系统计算的窗口位置与层次渲染窗口动画。
+
+根据对Surface的操作类型可以将Android的显示系统分为三个层次:
+    第一个层次是UI框架层，其工作为在Surface上绘制UI元素以及响应输入事件。
+·  第二个层次为WMS，其主要工作在于管理Surface的分配、层级顺序等。
+·  第三层为SurfaceFlinger，负责将多个Surface混合并输出。
+
+
+
+
+>>>>>>>>>>>>>>>   PMS   >>>>>>>>>>>>>>>>
+
+PMS用来管理所有的package信息，包括安装、卸载、更新以及解析AndroidManifest.xml以组织相应的数据结构，这些数据结构将会被PMS、ActivityMangerService等等service和application使用到

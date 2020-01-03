@@ -1,0 +1,25 @@
+Recyclerview的四级缓存：
+1. mAttachedScrap：我们可以看到这个变量是个存放ViewHolder对象的ArrayList,这一级缓存是没有容量限制的，只要符合条件的我来者不拒，全收了。前面讲两个专业术语的时候提到了Scrap,这个就属于Scrap中的一种，这里的数据是不做修改的，不会重新走Adapter的绑定方法。
+
+2. mChangedScrap：这个变量和上边的mAttachedScrap是一样的，唯一不同的从名字也可以看出来，它存放的是发生了变化的ViewHolder,如果使用到了这里的缓存的ViewHolder是要重新走Adapter的绑定方法的。
+
+3. mCachedViews：这个变量同样是一个存放ViewHolder对象的ArrayList,但是这个不同于上面的两个里面存放的是dettach掉的视图，它里面存放的是已经remove掉的视图，已经和RV分离的关系的视图，但是它里面的ViewHolder依然保存着之前的信息，比如position、和绑定的数据等等。这一级缓存是有容量限制的，默认是2（不同版本API可能会有差异，本文基于API26.1.0）。
+
+4. mRecyclerPool：这个变量呢本身是一个类，跟上面三个都不一样。这里面保存的ViewHolder不仅仅是removed掉的视图，而且是恢复了出厂设置的视图，任何绑定过的痕迹都没有了，想用这里缓存的ViewHolder那是铁定要重新走Adapter的绑定方法了。
+特点：
+1.快速重用屏幕上可见的item，不需要bind
+
+2.废弃的item缓存，需要bind
+
+3.多出4行的cache，不需要bind
+
+
+Listview的二级缓存：
+activeViews 存活页面 
+scrapViews 离屏缓存
+特点：
+1.快速重用屏幕上可见的item，不需要bind
+
+2.废弃的item缓存，需要bind
+
+

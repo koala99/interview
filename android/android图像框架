@@ -1,0 +1,25 @@
+Fresco缓存也是一大亮点， 三级缓存，分别是 Bitmap缓存，未解码图片缓存， 文件缓存。
+这里提一点Bitmap缓存：在5.0以下系统，Bitmap缓存位于ashmem，这样Bitmap对象的创建和释放将不会引发GC，更少的GC会使你的APP运行得更加流畅。5.0及其以上系统，相比之下，内存管理有了很大改进，所以Bitmap缓存直接位于Java的heap上。
+
+Glide虽然只有内存和磁盘缓存，在性能上比不上Fresco；但他也有另外的优点， Fresco缓存的时候，只会缓存原始图像，而Glide则会根据ImageView控件尺寸获得对应的大小的bitmap来展示，从而缓存也可以针对不同的对象：原始图像（source），结果图像(result); 可以通过.diskCacheStrategy()方法设置：
+
+fresco优点：
+最大的优势在于5.0以下(最低2.3)的bitmap加载。在5.0以下系统，Fresco将图片放到一个特别的内存区域(Ashmem区)
+大大减少OOM（在更底层的Native层对OOM进行处理，图片将不再占用App的内存）
+适用于需要高性能加载大量图片的场景
+缺点：
+包较大（2~3M）
+用法复杂
+侵入性强
+
+
+
+Glide优点：
+多种图片格式的缓存，适用于更多的内容表现形式（如Gif、WebP、缩略图、Video）
+生命周期集成（根据Activity或者Fragment的生命周期管理图片加载请求）
+高效处理Bitmap（bitmap的复用和主动回收，减少系统回收压力）
+高效的缓存策略，灵活（Picasso只会缓存原始尺寸的图片，Glide缓存的是多种规格），加载速度快且内存开销小（默认Bitmap格式的不同，使得内存开销是Picasso的一半）
+缺点：
+-没有文件缓存
+-java heap比Fresco高
+

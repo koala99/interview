@@ -1,0 +1,22 @@
+
+1.使用arm-linux-androideabi-addr2line  定位出错位置
+
+/Users/yangxin/Documents/devToos/java/android-ndk-r9d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-addr2line -e /Users/yangxin/Documents/devToos/java/android-ndk-r9d/samples/hello-jni/obj/local/armeabi-v7a/libhello-jni.so 00000cf4 00000d1c
+
+2.使用arm-linux-androideabi-objdump  定位出错的函数信息
+
+/Users/yangxin/Documents/devToos/java/android-ndk-r9d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-objdump -S -D /Users/yangxin/Documents/devToos/java/android-ndk-r9d/samples/hello-jni/obj/local/armeabi-v7a/libhello-jni.so > Users/yangxin/Desktop/dump.log
+
+
+3.ndk-stack
+
+如果你觉得上面的方法太麻烦的话，ndk-stack可以帮你减轻操作步聚，直接定位到代码出错的位置。
+
+实时分析日志：
+
+使用adb获取logcat的日志，并通过管道输出给ndk-stack分析，并指定包含符号表的so文件位置。如果程序包含多种CPU架构，需要根据手机的CPU类型，来选择不同的CPU架构目录。以armv7架构为例，执行如下命令：adb logcat | ndk-stack -sym /Users/yangxin/Documents/devToos/java/android-ndk-r9d/samples/hello-jni/obj/local/armeabi-v7a
+
+
+然后：
+adb logcat > crash.log
+ndk-stack -sym /Users/yangxin/Documents/devToos/java/android-ndk-r9d/samples/hello-jni/obj/local/armeabi-v7a -dump crash.log

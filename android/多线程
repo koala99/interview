@@ -1,4 +1,3 @@
-<h1>并发相关问题</h1>
  要清楚线程的概念，别让它与进程搞混淆。   
 　　进程：每个进程都有独立的代码和数据空间（进程上下文），进程间的切换会有较大的开销，一个进程包含1--n个线程。（进程是资源分配的最小单位）   
 　　线程：同一类线程共享代码和数据空间，每个线程有独立的运行栈和程序计数器(PC)，线程切换开销小。（线程是cpu调度的最小单位）   
@@ -49,6 +48,14 @@ wait()方法是Object类里的方法；当一个线程执行到wait()方法时�
 　　wait()使用notify或者notifyAlll或者指定睡眠时间来唤醒当前等待池中的线程。   
 　　wiat()必须放在synchronized block中，否则会在program runtime时扔出”java.lang.IllegalMonitorStateException“异常。    
 <h3>线程同步</h3>
+synchronized实现原理：
+通过monitorenter和monitorexit指令，可以保证被synchronized修饰的代码在同一时间只能被一个线程访问，在锁未释放之前，无法被其他线程访问到。因此，在Java中可以使用synchronized来保证方法和代码块内的操作是原子性的。
+
+synchronized与有序性
+synchronized是无法禁止指令重排和处理器优化的
+由于synchronized修饰的代码，同一时间只能被同一线程访问。那么也就是单线程执行的。所以，可以保证其有序性。
+synchronized其实是借助Monitor实现的，在加锁时会调用objectMonitor的enter方法，解锁的时候会调用exit方法。事实上，只有在JDK1.6之前，synchronized的实现才会直接调用ObjectMonitor的enter和exit，这种锁被称之为重量级锁。
+
 1、synchronized关键字的作用域有二种：    
 1）是某个对象实例内，synchronized aMethod(){}可以防止多个线程同时访问这个对象的synchronized方法（如果一个对象有多个synchronized方法，只要一个线程访问了其中的一个synchronized方法，其它线程不能同时访问这个对象中任何一个synchronized方法）。这时，不同的对象实例的synchronized方法是不相干扰的。也就是说，其它线程照样可以同时访问相同类的另一个对象实例中的synchronized方法；   
  
@@ -132,9 +139,28 @@ Java语言提供了一种稍弱的同步机制，即volatile变量，用来确�
 
 互斥量的加锁和解锁必须由同一线程分别对应使用，信号量可以由一个线程释放，另一个线程得到。
 
-<br/>
+四种线程池：
+1.Executors.newCacheThreadPool()：可缓存线程池，先查看池中有没有以前建立的线程，如果有，就直接使用。如果没有，就建一个新的线程加入池中，缓存型池子通常用于执行一些生存期很短的异步型任务
+2.Executors.newFixedThreadPool(int n)：创建一个可重用固定个数的线程池，以共享的无界队列方式来运行这些线程。
+3. Executors.newScheduledThreadPool(int n)：创建一个定长线程池，支持定时及周期性任务执行
+4. Executors.newSingleThreadExecutor()：创建一个单线程化的线程池，它只会用唯一的工作线程来执行任务，保证所有任务按照指定顺序(FIFO, LIFO, 优先级)执行。
+
+JDK主要提供了4种饱和策略供选择。4种策略都做为静态内部类在ThreadPoolExcutor中进行实现。
+1.AbortPolicy中止策略  
+使用该策略时在饱和时会抛出RejectedExecutionException（继承自RuntimeException），调用者可捕获该异常自行处理。
+2.DiscardPolicy抛弃策略
+不做任何处理直接抛弃任务
+3.DiscardOldestPolicy抛弃旧任务策略
+先将阻塞队列中的头元素出队抛弃，再尝试提交任务。如果此时阻塞队列使用PriorityBlockingQueue优先级队列，将会导致优先级最高的任务被抛弃，因此不建议将该种策略配合优先级队列使用。
+4.CallerRunsPolicy调用者运行
+既不抛弃任务也不抛出异常，直接运行任务的run方法，换言之将任务回退给调用者来直接运行。
+
 推荐使用ThreadPoolExecutor来创建线程池，而不是用Executors直接来创建
 //        var executor= Executors.newCachedThreadPool()
 //        var threadPoolExecutor= ThreadPoolExecutor(1,1,10,TimeUnit.SECONDS,
 //            ArrayBlockingQueue<Runnable>(1),
 //            ThreadPoolExecutor.DiscardOldestPolicy())
+
+
+
+synchronized：悲观锁

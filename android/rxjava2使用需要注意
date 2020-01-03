@@ -1,0 +1,28 @@
+rxjava2背压操作
+当上下游在不同的线程中，通过Observable发射，处理，响应数据流时，如果上游发射数据的速度快于下游接收处理数据的速度，这样对于那些没来得及处理的数据就会造成积压，这些数据既不会丢失，也不会被垃圾回收机制回收，而是存放在一个异步缓存池中，如果缓存池中的数据一直得不到处理，越积越多，最后就会造成内存溢出，这便是响应式编程中的背压（backpressure）问题。
+
+采用Flowable来解决
+由于只有在上下游运行在不同的线程中，且上游发射数据的速度大于下游接收处理数据的速度时，才会产生背压问题；
+所以，如果能够确定：
+1、上下游运行在同一个线程中，
+2、上下游工作在不同的线程中，但是下游处理数据的速度不慢于上游发射数据的速度，
+3、上下游工作在不同的线程中，但是数据流中只有一条数据
+则不会产生背压问题，就没有必要使用Flowable，以免影响性能。
+
+BackpressureStrategy
+    MISSING:
+通过Create方法创建的Flowable相当于没有指定背压策略，不会对通过onNext发射的数据做缓存或丢弃处理，需要下游通过背压操作符
+    ERROR：
+   如果放入Flowable的异步缓存池中的数据超限了，则会抛出MissingBackpressureException异常
+    BUFFER:
+内部维护了一个缓存池SpscLinkedArrayQueue，其大小不限，此策略下，如果Flowable默认的异步缓存池满了，会通过此缓存池暂存数据，它与Observable的异步缓存池一样，可以无限制向里添加数据，不会抛出MissingBackpressureException异常，但会导致OOM。
+    DROP：
+     Flowable的异步缓存池满了，会丢掉上游发送的数据
+    LATEST：
+    与Drop策略一样，如果缓存池满了，会丢掉将要放入缓存池中的数据，不同的是，不管缓存池的状态如何，LATEST都会将最后一条数据强行放入缓存池中，来保证观察者在接收到完成通知之前，能够接收到Flowable最新发射的一条数据
+
+
+
+AutoDispose 与 RxLifecycle:
+AutoDispose比RxLifecycle好的地方在于它不需要你的Activity或Fragment继承指定的类。只要你的Activity或Fragment的父类实现了LifecycleOwner这个接口即可。
+support.v4包中的Fragment也实现了LifecycleOwner接口。AndroidX支持库同样也实现了LifecycleOwner接口。

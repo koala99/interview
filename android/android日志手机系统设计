@@ -1,0 +1,28 @@
+日志丢失的问题：
+1.卡顿，影响性能
+2.日志丢失
+3.安全性
+4.日志分散
+
+
+
+1.日志输入走 native方法，，解决卡顿问题
+2.使用mmap，降低了日志丢失
+3.文件加密
+4.文件命名规范
+5.日志上传等，使用长连接进行push
+6.对进程写入： 多线程写入日志 采用读写锁ReadWriteLock
+
+三个线程读数据，三个线程写数据示例：
+可以同时读，读的时候不能写，不能同时写，写的时候不能读。
+读的时候上读锁，读完解锁；写的时候上写锁，写完解锁。
+
+
+ReadWriteLock rwl =new  ReentrantReadWriteLock();
+
+rwl.readLock().lock();//上读锁
+//释放读锁、上写锁
+rwl.readLock().unlock();
+rwl.writeLock().lock();
+//设置完成 释放写锁
+rwl.writeLock().unlock();
